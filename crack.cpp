@@ -6,11 +6,15 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <cstdint>
+#include <iomanip>
+#include <sstream>
+#include "crack.h"
 
 using namespace std;
 
-// A quick SHA256 implementation (truncated version for demo).
-typedef unsigned int uint32;
+// Educational SHA-256 implementation; not a production cryptography library.
+typedef std::uint32_t uint32;
 
 static const uint32 k[64] = {
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5,
@@ -63,7 +67,7 @@ string sha256(const string &input) {
     // Pre-processing
     static const size_t block_size = 64;
     vector<unsigned char> msg(input.begin(), input.end());
-    uint64_t bit_len = msg.size() * 8;
+    std::uint64_t bit_len = static_cast<std::uint64_t>(msg.size()) * 8;
     // Append '1' bit
     msg.push_back(0x80);
     // Append 0 bits until length % 512 == 448
@@ -87,10 +91,10 @@ string sha256(const string &input) {
     for (size_t i = 0; i < msg.size(); i += block_size) {
         uint32 w[64];
         for (int j = 0; j < 16; j++) {
-            w[j] = (msg[i + j * 4] << 24) |
-                   (msg[i + j * 4 + 1] << 16) |
-                   (msg[i + j * 4 + 2] << 8) |
-                   (msg[i + j * 4 + 3]);
+            w[j] = (static_cast<uint32>(msg[i + j * 4]) << 24) |
+                   (static_cast<uint32>(msg[i + j * 4 + 1]) << 16) |
+                   (static_cast<uint32>(msg[i + j * 4 + 2]) << 8) |
+                   static_cast<uint32>(msg[i + j * 4 + 3]);
         }
         for (int j = 16; j < 64; j++) {
             w[j] = sig1(w[j - 2]) + w[j - 7] + sig0(w[j - 15]) + w[j - 16];
@@ -129,12 +133,12 @@ string sha256(const string &input) {
     }
 
     // Produce the final hash value (big-endian)
-    char buf[65];
+    ostringstream digest;
+    digest << hex << setfill('0');
     for (int i = 0; i < 8; i++) {
-        sprintf(buf + i * 8, "%08x", h[i]);
+        digest << setw(8) << h[i];
     }
-    buf[64] = 0;
-    return string(buf);
+    return digest.str();
 }
 
 // Double-hash with salt: H(H(pw) + salt)
@@ -163,12 +167,15 @@ void bruteForce(const string &target, const string &salt, int length, string cur
 }
 
 string crackPassword(const string &target, const string &salt, int length) {
+    // This local exercise is deliberately limited to one through four letters.
+    if (length < 1 || length > 4) return "";
     foundPassword = false;
     resultPassword = "";
     bruteForce(target, salt, length, "");
     return resultPassword;
 }
 
+#ifndef PASSWORD_LAB_TEST
 int main() {
     // Example usage:
     // 1) Create hashed values for 2 passwords
@@ -193,5 +200,6 @@ int main() {
     cout << "Cracked 2: " << found2 << " in "
          << chrono::duration_cast<chrono::milliseconds>(end - start).count()
          << " ms" << endl;
-    return 0;
+    return (found1 == pw1 && found2 == pw2) ? 0 : 1;
 }
+#endif

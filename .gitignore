@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Locally generated executables and test caches
+/crack
+/test_crack
+__pycache__/
+*.py[cod]
